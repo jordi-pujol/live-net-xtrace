@@ -67,13 +67,13 @@ _option_is_set "xtrace"; then
 	set +o xtrace
 	pipe="$( { mkfifo "$(mktemp -u | tee /dev/fd/3 )" ; } 3>&1)"
 
-	exec 3<>$pipe
-	rm -f $pipe
+	exec 3<>"${pipe}"
+	rm -f "${pipe}"
 
 	{ _xtrace "/tmp/$(basename "${0}")-xtrace.txt" ; } 2> /dev/null &
 	pid_xtrace=${!}
 
-	trap 'kill $pid_xtrace; wait' EXIT
+	trap 'kill ${pid_xtrace}; wait' EXIT
 
 	ASH_SOURCE="$(basename "${0}")"
 	FUNCNAME=""
