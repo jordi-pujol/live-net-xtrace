@@ -15,20 +15,20 @@ _option_is_set() {
 _xtrace() {
 	IFS=":"
 	while true; do
-		if read -r ASH_SOURCE FUNCNAME SECTION line <&3; then
+		if read -r SH_SOURCE SH_FUNCNAME SH_SECTION line <&${SH_XTRACEFD}; then
 			printf '+ %s %s:%15s:%12s: %s\n' \
 				"$(date +'%F %X')" \
-				"${ASH_SOURCE}" \
-				"${FUNCNAME}" \
-				"${SECTION}" \
+				"${SH_SOURCE}" \
+				"${SH_FUNCNAME}" \
+				"${SH_SECTION}" \
 				"${line}"
 		fi
 	done > "${1}"
 }
 
 _loopwait() {
-	{ if _option_is_set "xtrace"; then
-		local FUNCNAME="_loopwait" SECTION=""
+	{ if [ -n "${SH_XTRACEFD}" ]; then
+		local SH_FUNCNAME="_loopwait" SH_SECTION=""
 	fi
 	} 2> /dev/null
 	echo hello $i
@@ -37,13 +37,13 @@ _loopwait() {
 }
 
 _looping() {
-	{ if _option_is_set "xtrace"; then
-		local FUNCNAME="_looping" SECTION=""
+	{ if [ -n "${SH_XTRACEFD}" ]; then
+		local SH_FUNCNAME="_looping" SH_SECTION=""
 	fi
 	} 2> /dev/null
 	local i
-	{ if _option_is_set "xtrace"; then
-		SECTION="first_loop"
+	{ if [ -n "${SH_XTRACEFD}" ]; then
+		SH_SECTION="first_loop"
 	fi
 	} 2> /dev/null
 	i=0
@@ -51,8 +51,8 @@ _looping() {
 		echo $i
 		_loopwait
 	done
-	{ if _option_is_set "xtrace"; then
-		SECTION="second_loop"
+	{ if [ -n "${SH_XTRACEFD}" ]; then
+		SH_SECTION="second_loop"
 	fi
 	} 2> /dev/null
 	i=0
@@ -62,11 +62,13 @@ _looping() {
 	done
 }
 
+SH_XTRACEFD=""
 if [ -n "${DEBUG:-}" ] || \
 _option_is_set "xtrace"; then
 	set +o xtrace
 	pipe="$( { mkfifo "$(mktemp -u | tee /dev/fd/3 )" ; } 3>&1)"
 
+	SH_XTRACEFD=3
 	exec 3<>"${pipe}"
 	rm -f "${pipe}"
 
@@ -75,11 +77,11 @@ _option_is_set "xtrace"; then
 
 	trap 'kill ${pid_xtrace}; wait' EXIT
 
-	ASH_SOURCE="$(basename "${0}")"
-	FUNCNAME=""
-	SECTION=""
-	exec 2>&3
-	export PS4='${ASH_SOURCE}:${FUNCNAME}:${SECTION}: '
+	SH_SOURCE="$(basename "${0}")"
+	SH_FUNCNAME=""
+	SH_SECTION=""
+	exec 2>&${SH_XTRACEFD}
+	export PS4='${SH_SOURCE}:${SH_FUNCNAME}:${SH_SECTION}: '
 	set -o xtrace
 fi
 
